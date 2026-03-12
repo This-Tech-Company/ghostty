@@ -294,3 +294,9 @@ class PulseWindowController: BaseTerminalController {
         NSApp.terminate(nil)
     }
 }
+
+// MARK: - Pulse Notification Names
+
+extension Notification.Name {
+    static let pulseDesktopNotification = Notification.Name("com.pulse.desktopNotification")
+}

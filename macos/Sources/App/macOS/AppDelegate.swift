@@ -131,6 +131,12 @@ class AppDelegate: NSObject,
         }
     }
 
+    /// The single Pulse window controller.
+    private(set) var pulseWindowController: PulseWindowController?
+
+    /// The Pulse session manager.
+    private(set) var pulseSessionManager: PulseSessionManager?
+
     /// Manages updates
     let updateController = UpdateController()
     var updateViewModel: UpdateViewModel {
@@ -266,13 +272,18 @@ class AppDelegate: NSObject,
         )
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(ghosttyNewWindow(_:)),
+            selector: #selector(pulseNewWindow(_:)),
             name: Ghostty.Notification.ghosttyNewWindow,
             object: nil)
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(ghosttyNewTab(_:)),
+            selector: #selector(pulseNewTab(_:)),
             name: Ghostty.Notification.ghosttyNewTab,
+            object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(pulseDesktopNotification(_:)),
+            name: .pulseDesktopNotification,
             object: nil)
 
         // Configure user notifications
@@ -356,9 +367,14 @@ class AppDelegate: NSObject,
             // is possible to have other windows in a few scenarios:
             //   - if we're opening a URL since `application(_:openFile:)` is called before this.
             //   - if we're restoring from persisted state
-            if TerminalController.all.isEmpty && derivedConfig.initialWindow {
+            if pulseWindowController == nil && derivedConfig.initialWindow {
                 undoManager.disableUndoRegistration()
-                _ = TerminalController.newWindow(ghostty)
+                let sessionManager = PulseSessionManager(ghostty: ghostty)
+                self.pulseSessionManager = sessionManager
+                let controller = PulseWindowController(ghostty, sessionManager: sessionManager)
+                controller.showWindow(self)
+                self.pulseWindowController = controller
+                // NOTE: PulseWindowController.init already creates the first session
                 undoManager.enableUndoRegistration()
             }
         }
@@ -444,7 +460,7 @@ class AppDelegate: NSObject,
         // This is possible with flag set to false if there a race where the
         // window is still initializing and is not visible but the user clicked
         // the dock icon.
-        guard TerminalController.all.isEmpty else { return true }
+        guard pulseWindowController == nil else { return true }
 
         // If the application isn't active yet then we don't want to process
         // this because we're not ready. This happens sometimes in Xcode runs
@@ -452,7 +468,11 @@ class AppDelegate: NSObject,
         guard applicationHasBecomeActive else { return true }
 
         // No visible windows, open a new one.
-        _ = TerminalController.newWindow(ghostty)
+        let sessionManager = PulseSessionManager(ghostty: ghostty)
+        self.pulseSessionManager = sessionManager
+        let controller = PulseWindowController(ghostty, sessionManager: sessionManager)
+        controller.showWindow(self)
+        self.pulseWindowController = controller
         return false
     }
 
@@ -518,15 +538,8 @@ class AppDelegate: NSObject,
             }
         }
 
-        switch ghostty.config.macosDockDropBehavior {
-        case .new_tab:
-            _ = TerminalController.newTab(
-                ghostty,
-                from: TerminalController.preferredParent?.window,
-                withBaseConfig: config
-            )
-        case .new_window: _ = TerminalController.newWindow(ghostty, withBaseConfig: config)
-        }
+        // In Pulse mode, both tab and window creation map to new sessions
+        pulseWindowController?.createNewSession(baseConfig: config)
 
         return true
     }
@@ -717,24 +730,21 @@ class AppDelegate: NSObject,
         }
     }
 
-    @objc private func ghosttyNewWindow(_ notification: Notification) {
+    @objc private func pulseNewWindow(_ notification: Notification) {
         let configAny = notification.userInfo?[Ghostty.Notification.NewSurfaceConfigKey]
         let config = configAny as? Ghostty.SurfaceConfiguration
-        _ = TerminalController.newWindow(ghostty, withBaseConfig: config)
+        pulseWindowController?.createNewSession(baseConfig: config)
     }
 
-    @objc private func ghosttyNewTab(_ notification: Notification) {
-        guard let surfaceView = notification.object as? Ghostty.SurfaceView else { return }
-        guard let window = surfaceView.window else { return }
-
-        // We only want to listen to new tabs if the focused parent is
-        // a regular terminal controller.
-        guard window.windowController is TerminalController else { return }
-
+    @objc private func pulseNewTab(_ notification: Notification) {
         let configAny = notification.userInfo?[Ghostty.Notification.NewSurfaceConfigKey]
         let config = configAny as? Ghostty.SurfaceConfiguration
+        pulseWindowController?.createNewSession(baseConfig: config)
+    }
 
-        _ = TerminalController.newTab(ghostty, from: window, withBaseConfig: config)
+    @objc private func pulseDesktopNotification(_ notification: Notification) {
+        guard let surfaceView = notification.object as? Ghostty.SurfaceView else { return }
+        pulseSessionManager?.incrementNotification(forSessionOwning: surfaceView.id)
     }
 
     private func setDockBadge() {
@@ -785,7 +795,6 @@ class AppDelegate: NSObject,
 
         // Config could change keybindings, so update everything that depends on that
         syncMenuShortcuts(config)
-        TerminalController.all.forEach { $0.relabelTabs() }
 
         // Update our badge since config can change what we show.
         syncDockBadge()
@@ -911,7 +920,12 @@ class AppDelegate: NSObject,
     // MARK: - GhosttyAppDelegate
 
     func findSurface(forUUID uuid: UUID) -> Ghostty.SurfaceView? {
-        for c in TerminalController.all {
+        // Search Pulse session trees (including background sessions)
+        if let surface = pulseSessionManager?.findSurface(id: uuid) {
+            return surface
+        }
+
+        for c in PulseWindowController.all {
             for view in c.surfaceTree where view.id == uuid {
                 return view
             }
@@ -954,18 +968,15 @@ class AppDelegate: NSObject,
     }
 
     @IBAction func newWindow(_ sender: Any?) {
-        _ = TerminalController.newWindow(ghostty)
+        pulseWindowController?.createNewSession()
     }
 
     @IBAction func newTab(_ sender: Any?) {
-        _ = TerminalController.newTab(
-            ghostty,
-            from: TerminalController.preferredParent?.window
-        )
+        pulseWindowController?.createNewSession()
     }
 
     @IBAction func closeAllWindows(_ sender: Any?) {
-        TerminalController.closeAllWindows()
+        pulseWindowController?.window?.close()
         AboutController.shared.hide()
     }
 

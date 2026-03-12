@@ -763,11 +763,16 @@ class BaseTerminalController: NSWindowController,
         }
 
         replaceSurfaceTree(removedTree, moveFocusFrom: oldFocusedSurface)
-        _ = TerminalController.newWindow(
-            ghostty,
-            tree: newTree,
-            position: notification.userInfo?[Notification.Name.ghosttySurfaceDragEndedNoTargetPointKey] as? NSPoint,
-            confirmUndo: false)
+        // In Pulse mode, dragged splits create new sessions instead of new windows
+        if PulseWindowController.shared != nil {
+            // Pulse doesn't support split-to-window drag; the surface stays in place
+        } else {
+            _ = TerminalController.newWindow(
+                ghostty,
+                tree: newTree,
+                position: notification.userInfo?[Notification.Name.ghosttySurfaceDragEndedNoTargetPointKey] as? NSPoint,
+                confirmUndo: false)
+        }
     }
 
     // MARK: Local Events

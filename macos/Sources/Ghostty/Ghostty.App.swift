@@ -1391,6 +1391,13 @@ extension Ghostty {
             title: String,
             body: String,
             requireFocus: Bool = true) {
+            // Post notification for Pulse badge tracking
+            NotificationCenter.default.post(
+                name: .pulseDesktopNotification,
+                object: surfaceView,
+                userInfo: ["title": title, "body": body]
+            )
+
             let center = UNUserNotificationCenter.current()
             center.requestAuthorization(options: [.alert, .sound]) { _, error in
                 if let error = error {

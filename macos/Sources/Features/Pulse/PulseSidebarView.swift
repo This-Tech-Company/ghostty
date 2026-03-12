@@ -8,7 +8,7 @@ struct PulseSidebarView: View {
     let onCloseSession: (UUID) -> Void
     let onRenameSession: (UUID, String) -> Void
 
-    @State private var renamingSessionId: UUID? = nil
+    @State private var editingSessionId: UUID? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -36,18 +36,30 @@ struct PulseSidebarView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(sessionManager.sessions) { session in
+                        let isEditingThis = Binding<Bool>(
+                            get: { editingSessionId == session.id },
+                            set: { newVal in editingSessionId = newVal ? session.id : nil }
+                        )
+
                         PulseSessionRowView(
                             session: session,
                             isActive: session.id == sessionManager.activeSessionId,
                             onRename: { newName in
                                 onRenameSession(session.id, newName)
-                            }
+                            },
+                            isEditing: isEditingThis
                         )
                         .contentShape(Rectangle())
-                        .onTapGesture {
+                        .onTapGesture(count: 2) {
+                            editingSessionId = session.id
+                        }
+                        .onTapGesture(count: 1) {
                             onSelectSession(session.id)
                         }
                         .contextMenu {
+                            Button("Rename...") {
+                                editingSessionId = session.id
+                            }
                             Button("Duplicate") {
                                 onCreateSession()
                             }

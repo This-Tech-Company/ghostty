@@ -5,8 +5,8 @@ struct PulseSessionRowView: View {
     let session: PulseSession
     let isActive: Bool
     let onRename: (String) -> Void
+    @Binding var isEditing: Bool
 
-    @State private var isEditing: Bool = false
     @State private var editText: String = ""
 
     var body: some View {
@@ -16,7 +16,6 @@ struct PulseSessionRowView: View {
                 .fill(statusColor)
                 .frame(width: 8, height: 8)
 
-            // Name (editable on double-click)
             if isEditing {
                 TextField("", text: $editText, onCommit: {
                     let trimmed = editText.trimmingCharacters(in: .whitespaces)
@@ -29,6 +28,7 @@ struct PulseSessionRowView: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(Color(hex: 0xF5F5F7))
                 .onExitCommand { isEditing = false }
+                .onAppear { editText = session.name }
             } else {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(session.name)
@@ -42,10 +42,6 @@ struct PulseSessionRowView: View {
                             .foregroundColor(Color(hex: isActive ? 0x86868B : 0x56565A))
                             .lineLimit(1)
                     }
-                }
-                .onTapGesture(count: 2) {
-                    editText = session.name
-                    isEditing = true
                 }
             }
 

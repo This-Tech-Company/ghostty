@@ -4,6 +4,10 @@ import SwiftUI
 struct PulseSessionRowView: View {
     let session: PulseSession
     let isActive: Bool
+    let onRename: (String) -> Void
+
+    @State private var isEditing: Bool = false
+    @State private var editText: String = ""
 
     var body: some View {
         HStack(spacing: 10) {
@@ -12,18 +16,36 @@ struct PulseSessionRowView: View {
                 .fill(statusColor)
                 .frame(width: 8, height: 8)
 
-            // Name and working directory
-            VStack(alignment: .leading, spacing: 2) {
-                Text(session.name)
-                    .font(.system(size: 13, weight: isActive ? .medium : .regular))
-                    .foregroundColor(isActive ? Color(hex: 0xF5F5F7) : Color(hex: 0xB0B0B3))
-                    .lineLimit(1)
-
-                if let pwd = session.workingDirectory {
-                    Text(pwd)
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(Color(hex: isActive ? 0x86868B : 0x56565A))
+            // Name (editable on double-click)
+            if isEditing {
+                TextField("", text: $editText, onCommit: {
+                    let trimmed = editText.trimmingCharacters(in: .whitespaces)
+                    if !trimmed.isEmpty {
+                        onRename(trimmed)
+                    }
+                    isEditing = false
+                })
+                .textFieldStyle(.plain)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(Color(hex: 0xF5F5F7))
+                .onExitCommand { isEditing = false }
+            } else {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(session.name)
+                        .font(.system(size: 13, weight: isActive ? .medium : .regular))
+                        .foregroundColor(isActive ? Color(hex: 0xF5F5F7) : Color(hex: 0xB0B0B3))
                         .lineLimit(1)
+
+                    if let pwd = session.workingDirectory {
+                        Text(shortPath(pwd))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(Color(hex: isActive ? 0x86868B : 0x56565A))
+                            .lineLimit(1)
+                    }
+                }
+                .onTapGesture(count: 2) {
+                    editText = session.name
+                    isEditing = true
                 }
             }
 
@@ -57,6 +79,17 @@ struct PulseSessionRowView: View {
         case .idle: return Color(hex: 0x86868B)
         case .disconnected: return Color(hex: 0xFF5F57)
         }
+    }
+
+    /// Shorten path to just the last folder name.
+    /// "/Users/pawangiri/Apps/TTC/pulse" → "~/Apps/TTC/pulse"
+    private func shortPath(_ path: String) -> String {
+        let home = NSHomeDirectory()
+        if path.hasPrefix(home) {
+            let relative = String(path.dropFirst(home.count))
+            return "~" + relative
+        }
+        return path
     }
 }
 

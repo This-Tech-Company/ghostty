@@ -18,7 +18,7 @@ class PulseWindow: NSWindow {
         // Dark chrome
         self.backgroundColor = NSColor(red: 0x24/255, green: 0x24/255, blue: 0x26/255, alpha: 1)
         self.titlebarAppearsTransparent = true
-        self.titleVisibility = .visible
+        self.titleVisibility = .hidden
         self.title = "Pulse"
 
         // No native tab bar

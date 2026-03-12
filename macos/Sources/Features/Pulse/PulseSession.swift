@@ -40,9 +40,12 @@ struct PulseSession: Identifiable, Codable, Equatable {
     /// Extracts the last path component (e.g., "~/Apps/TTC/pulse" → "pulse").
     static func autoName(from pwd: String?) -> String {
         guard let pwd = pwd, !pwd.isEmpty else { return "shell" }
-        let expanded = pwd.hasPrefix("~")
-            ? pwd
-            : (pwd as NSString).lastPathComponent
-        return (expanded as NSString).lastPathComponent
+        // Just the last folder name: "/Users/pawangiri/Apps/TTC/pulse" → "pulse"
+        let name = (pwd as NSString).lastPathComponent
+        // Home directory shows as "~"
+        if name == NSUserName() || pwd == NSHomeDirectory() || pwd == "~" {
+            return "~"
+        }
+        return name
     }
 }

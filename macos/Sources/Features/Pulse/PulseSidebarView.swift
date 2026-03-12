@@ -8,9 +8,11 @@ struct PulseSidebarView: View {
     let onCloseSession: (UUID) -> Void
     let onRenameSession: (UUID, String) -> Void
 
+    @State private var renamingSessionId: UUID? = nil
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
+            // Header with top padding for traffic lights
             HStack {
                 Text("SESSIONS")
                     .font(.system(size: 11, weight: .semibold))
@@ -27,6 +29,7 @@ struct PulseSidebarView: View {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
+            .padding(.top, 6)
             .padding(.bottom, 12)
 
             // Session list
@@ -35,16 +38,16 @@ struct PulseSidebarView: View {
                     ForEach(sessionManager.sessions) { session in
                         PulseSessionRowView(
                             session: session,
-                            isActive: session.id == sessionManager.activeSessionId
+                            isActive: session.id == sessionManager.activeSessionId,
+                            onRename: { newName in
+                                onRenameSession(session.id, newName)
+                            }
                         )
                         .contentShape(Rectangle())
                         .onTapGesture {
                             onSelectSession(session.id)
                         }
                         .contextMenu {
-                            Button("Rename...") {
-                                // Trigger rename (handled by parent via sheet/popover)
-                            }
                             Button("Duplicate") {
                                 onCreateSession()
                             }
@@ -52,11 +55,6 @@ struct PulseSidebarView: View {
                             Button("Close Session") {
                                 onCloseSession(session.id)
                             }
-                        }
-                    }
-                    .onMove { source, destination in
-                        if let fromIndex = source.first {
-                            sessionManager.moveSession(fromIndex: fromIndex, toIndex: destination)
                         }
                     }
                 }
@@ -69,7 +67,7 @@ struct PulseSidebarView: View {
                 .fill(Color.white.opacity(0.06))
                 .frame(height: 1)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 16)
+                .padding(.vertical, 12)
 
             // Quick Actions
             VStack(alignment: .leading, spacing: 0) {

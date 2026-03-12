@@ -30,19 +30,10 @@ struct PulseSessionRowView: View {
                 .onExitCommand { isEditing = false }
                 .onAppear { editText = session.name }
             } else {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(session.name)
-                        .font(.system(size: 13, weight: isActive ? .medium : .regular))
-                        .foregroundColor(isActive ? Color(hex: 0xF5F5F7) : Color(hex: 0xB0B0B3))
-                        .lineLimit(1)
-
-                    if let pwd = session.workingDirectory {
-                        Text(shortPath(pwd))
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(Color(hex: isActive ? 0x86868B : 0x56565A))
-                            .lineLimit(1)
-                    }
-                }
+                Text(session.name)
+                    .font(.system(size: 13, weight: isActive ? .medium : .regular))
+                    .foregroundColor(isActive ? Color(hex: 0xF5F5F7) : Color(hex: 0xB0B0B3))
+                    .lineLimit(1)
             }
 
             Spacer()

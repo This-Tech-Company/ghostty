@@ -216,21 +216,21 @@ class PulseWindowController: BaseTerminalController {
         center.addObserver(
             self,
             selector: #selector(pulseCloseTab(_:)),
-            name: Ghostty.Notification.ghosttyCloseTab,
+            name: .ghosttyCloseTab,
             object: nil)
 
         // Close window → close active session (quit if last)
         center.addObserver(
             self,
             selector: #selector(pulseCloseWindow(_:)),
-            name: Ghostty.Notification.ghosttyCloseWindow,
+            name: .ghosttyCloseWindow,
             object: nil)
 
         // Move tab → reorder session
         center.addObserver(
             self,
             selector: #selector(pulseMoveTab(_:)),
-            name: Ghostty.Notification.ghosttyMoveTab,
+            name: .ghosttyMoveTab,
             object: nil)
 
         // Toggle fullscreen (was in TerminalController, needed for fullscreen support)

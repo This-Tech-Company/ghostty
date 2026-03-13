@@ -66,6 +66,24 @@ class PulseWindowController: BaseTerminalController {
         setupPulseNotificationObservers()
 
         PulseWindowController.shared = self
+
+        // Restore previous session state if available
+        if let appDelegate = NSApp.delegate as? AppDelegate,
+           let pendingRestore = appDelegate.pendingPulseRestore {
+            // Clear the default session created above — restore will recreate everything.
+            sessionManager.sessions.removeAll()
+            sessionManager.splitTreeMap.removeAll()
+
+            pendingRestore.restore(into: sessionManager, ghostty: ghostty)
+            appDelegate.pendingPulseRestore = nil
+
+            // Update the tree to the restored active session
+            if let activeId = sessionManager.activeSessionId,
+               let tree = sessionManager.splitTreeMap[activeId] {
+                self.surfaceTree = tree
+                syncFocusToSurfaceTree()
+            }
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -117,6 +135,11 @@ class PulseWindowController: BaseTerminalController {
     func switchToSession(id: UUID) {
         guard id != sessionManager.activeSessionId else { return }
 
+        // Save focused surface for the current session before switching
+        if let currentSessionId = sessionManager.activeSessionId {
+            sessionManager.saveFocusedSurface(focusedSurface?.id, forSession: currentSessionId)
+        }
+
         // Save current tree
         saveCurrentTree()
 
@@ -124,6 +147,14 @@ class PulseWindowController: BaseTerminalController {
         guard let newTree = sessionManager.switchToSession(id: id) else { return }
         self.surfaceTree = newTree
         syncFocusToSurfaceTree()
+
+        // Restore focus to last active pane in this session
+        if let savedFocusId = sessionManager.focusedSurfaceId(forSession: id),
+           let surface = sessionManager.findSurface(id: savedFocusId) {
+            DispatchQueue.main.async { [weak self] in
+                self?.focusSurface(surface)
+            }
+        }
     }
 
     func closeSession(id: UUID) {
@@ -180,29 +211,26 @@ class PulseWindowController: BaseTerminalController {
 
             // Cmd+1 through Cmd+9: switch to session by index
             if let digit = Int(key), digit >= 1 && digit <= 9 {
-                self.saveCurrentTree()
-                if let tree = self.sessionManager.switchToSession(index: digit - 1) {
-                    self.surfaceTree = tree
-                    self.syncFocusToSurfaceTree()
-                }
+                let targetIndex = digit - 1
+                guard targetIndex < self.sessionManager.sessions.count else { return nil }
+                let targetId = self.sessionManager.sessions[targetIndex].id
+                self.switchToSession(id: targetId)
                 return nil // consume event
             }
 
             // Cmd+Shift+] and Cmd+Shift+[: next/previous session
             if event.modifierFlags.contains(.shift) {
                 if key == "]" {
-                    self.saveCurrentTree()
-                    if let tree = self.sessionManager.switchToNextSession() {
-                        self.surfaceTree = tree
-                        self.syncFocusToSurfaceTree()
-                    }
+                    guard let activeId = self.sessionManager.activeSessionId,
+                          let currentIndex = self.sessionManager.sessions.firstIndex(where: { $0.id == activeId }) else { return nil }
+                    let nextIndex = (currentIndex + 1) % self.sessionManager.sessions.count
+                    self.switchToSession(id: self.sessionManager.sessions[nextIndex].id)
                     return nil
                 } else if key == "[" {
-                    self.saveCurrentTree()
-                    if let tree = self.sessionManager.switchToPreviousSession() {
-                        self.surfaceTree = tree
-                        self.syncFocusToSurfaceTree()
-                    }
+                    guard let activeId = self.sessionManager.activeSessionId,
+                          let currentIndex = self.sessionManager.sessions.firstIndex(where: { $0.id == activeId }) else { return nil }
+                    let prevIndex = (currentIndex - 1 + self.sessionManager.sessions.count) % self.sessionManager.sessions.count
+                    self.switchToSession(id: self.sessionManager.sessions[prevIndex].id)
                     return nil
                 }
             }
@@ -252,6 +280,13 @@ class PulseWindowController: BaseTerminalController {
             selector: #selector(pulseDesktopNotification(_:)),
             name: .pulseDesktopNotification,
             object: nil)
+
+        // Load workspace notification
+        center.addObserver(
+            self,
+            selector: #selector(pulseLoadWorkspace(_:)),
+            name: .pulseLoadWorkspace,
+            object: nil)
     }
 
     @objc private func pulseCloseTab(_ notification: Notification) {
@@ -290,6 +325,47 @@ class PulseWindowController: BaseTerminalController {
         sessionManager.incrementNotification(forSessionOwning: surfaceView.id)
     }
 
+    @objc private func pulseLoadWorkspace(_ notification: Notification) {
+        guard let name = notification.userInfo?["name"] as? String else { return }
+        loadWorkspace(name: name)
+    }
+
+    // MARK: - Workspace Loading
+
+    func loadWorkspace(name: String) {
+        guard let entries = try? sessionManager.loadWorkspace(name: name) else { return }
+
+        // Close all existing sessions
+        let existingIds = sessionManager.sessions.map { $0.id }
+        for id in existingIds {
+            _ = sessionManager.closeSession(id: id)
+        }
+
+        // Create sessions from workspace
+        var activeId: UUID?
+        for entry in entries {
+            guard let _ = ghostty.app else { continue }
+            var config: Ghostty.SurfaceConfiguration? = nil
+            if let dir = entry.workingDirectory {
+                config = Ghostty.SurfaceConfiguration()
+                config?.workingDirectory = dir
+            }
+            guard let sessionId = sessionManager.createSession(baseConfig: config) else { continue }
+            if entry.isCustomName {
+                sessionManager.renameSession(id: sessionId, name: entry.name)
+            }
+            if entry.isActive {
+                activeId = sessionId
+            }
+        }
+
+        // Switch to the active session
+        if let activeId = activeId, let tree = sessionManager.switchToSession(id: activeId) {
+            self.surfaceTree = tree
+            syncFocusToSurfaceTree()
+        }
+    }
+
     // MARK: - Window Delegate
 
     override func windowWillClose(_ notification: Notification) {
@@ -305,4 +381,5 @@ class PulseWindowController: BaseTerminalController {
 
 extension Notification.Name {
     static let pulseDesktopNotification = Notification.Name("com.pulse.desktopNotification")
+    static let pulseLoadWorkspace = Notification.Name("com.pulse.loadWorkspace")
 }

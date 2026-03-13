@@ -52,6 +52,11 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
     var onToggleSidebar: (() -> Void)? = nil
     var onCloseSession: (() -> Void)? = nil
 
+    // Workspace callbacks for the command palette.
+    var onSaveWorkspace: (() -> Void)? = nil
+    var onLoadWorkspace: ((String) -> Void)? = nil
+    var workspaceNames: [String]? = nil
+
     /// The most recently focused surface, equal to `focusedSurface` when it is non-nil.
     @State private var lastFocusedSurface: Weak<Ghostty.SurfaceView>?
 
@@ -123,7 +128,10 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
                         },
                         onCreateSession: onCreateSession,
                         onToggleSidebar: onToggleSidebar,
-                        onCloseSession: onCloseSession
+                        onCloseSession: onCloseSession,
+                        onSaveWorkspace: onSaveWorkspace,
+                        onLoadWorkspace: onLoadWorkspace,
+                        workspaceNames: workspaceNames
                     )
                 }
 

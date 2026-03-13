@@ -23,6 +23,11 @@ struct TerminalCommandPaletteView: View {
     var onToggleSidebar: (() -> Void)? = nil
     var onCloseSession: (() -> Void)? = nil
 
+    /// Workspace callbacks.
+    var onSaveWorkspace: (() -> Void)? = nil
+    var onLoadWorkspace: ((String) -> Void)? = nil
+    var workspaceNames: [String]? = nil
+
     var body: some View {
         ZStack {
             if isPresented {
@@ -235,6 +240,27 @@ struct TerminalCommandPaletteView: View {
             ) {
                 onCloseSession()
             })
+        }
+
+        if let onSaveWorkspace {
+            options.append(CommandOption(
+                title: "Save Workspace",
+                symbols: ["⌘", "⇧", "S"],
+                leadingIcon: "square.and.arrow.down"
+            ) {
+                onSaveWorkspace()
+            })
+        }
+
+        if let onLoadWorkspace, let names = workspaceNames {
+            for name in names {
+                options.append(CommandOption(
+                    title: "Load Workspace: \(name)",
+                    leadingIcon: "square.and.arrow.up"
+                ) {
+                    onLoadWorkspace(name)
+                })
+            }
         }
 
         return options

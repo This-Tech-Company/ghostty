@@ -16,6 +16,9 @@ class PulseSessionManager: ObservableObject {
     /// is attached to the PulseWindowController; others are stored here.
     var splitTreeMap: [UUID: SplitTree<Ghostty.SurfaceView>] = [:]
 
+    /// Tracks the last focused surface ID for each session.
+    var focusedSurfaceMap: [UUID: UUID] = [:]
+
     /// Combine subscriptions for surface title/pwd observation.
     private var surfaceSubscriptions: [UUID: Set<AnyCancellable>] = [:]
 
@@ -62,6 +65,7 @@ class PulseSessionManager: ObservableObject {
 
         // Remove split tree (surfaces will deinit and free pty)
         splitTreeMap.removeValue(forKey: id)
+        focusedSurfaceMap.removeValue(forKey: id)
 
         // Remove session
         sessions.remove(at: index)
@@ -83,6 +87,18 @@ class PulseSessionManager: ObservableObject {
     func closeActiveSession() -> UUID? {
         guard let activeId = activeSessionId else { return nil }
         return closeSession(id: activeId)
+    }
+
+    // MARK: - Focus Tracking
+
+    /// Save the focused surface ID for a session.
+    func saveFocusedSurface(_ surfaceId: UUID?, forSession sessionId: UUID) {
+        focusedSurfaceMap[sessionId] = surfaceId
+    }
+
+    /// Get the last focused surface ID for a session.
+    func focusedSurfaceId(forSession sessionId: UUID) -> UUID? {
+        return focusedSurfaceMap[sessionId]
     }
 
     // MARK: - Session Switching
@@ -243,4 +259,57 @@ class PulseSessionManager: ObservableObject {
         guard let id = activeSessionId else { return nil }
         return sessions.first { $0.id == id }
     }
+
+    // MARK: - Workspace Persistence
+
+    /// Directory for workspace files.
+    private static var workspacesDirectory: URL {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        return appSupport.appendingPathComponent("Pulse/workspaces")
+    }
+
+    /// Save current sessions as a named workspace.
+    func saveWorkspace(name: String) throws {
+        let dir = Self.workspacesDirectory
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        let states = sessions.map { session in
+            WorkspaceEntry(
+                name: session.name,
+                isCustomName: session.isCustomName,
+                workingDirectory: session.workingDirectory,
+                isActive: session.id == activeSessionId
+            )
+        }
+
+        let data = try JSONEncoder().encode(states)
+        let fileURL = dir.appendingPathComponent("\(name).json")
+        try data.write(to: fileURL)
+    }
+
+    /// List saved workspace names.
+    func listWorkspaces() -> [String] {
+        let dir = Self.workspacesDirectory
+        guard let files = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else {
+            return []
+        }
+        return files
+            .filter { $0.pathExtension == "json" }
+            .map { $0.deletingPathExtension().lastPathComponent }
+            .sorted()
+    }
+
+    /// Load a workspace, returns session configs to create.
+    func loadWorkspace(name: String) throws -> [WorkspaceEntry] {
+        let fileURL = Self.workspacesDirectory.appendingPathComponent("\(name).json")
+        let data = try Data(contentsOf: fileURL)
+        return try JSONDecoder().decode([WorkspaceEntry].self, from: data)
+    }
+}
+
+struct WorkspaceEntry: Codable {
+    let name: String
+    let isCustomName: Bool
+    let workingDirectory: String?
+    let isActive: Bool
 }

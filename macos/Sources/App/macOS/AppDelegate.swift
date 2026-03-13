@@ -101,6 +101,9 @@ class AppDelegate: NSObject,
     /// The global undo manager for app-level state such as window restoration.
     lazy var undoManager = ExpiringUndoManager()
 
+    /// Pending Pulse state to restore on next window creation.
+    var pendingPulseRestore: PulseRestorableState?
+
     /// The current state of the quick terminal.
     private var quickTerminalControllerState: QuickTerminalState = .uninitialized
 
@@ -884,6 +887,12 @@ class AppDelegate: NSObject,
         default:
             break
         }
+
+        // Save Pulse state
+        if let pulseController = PulseWindowController.shared {
+            let pulseState = PulseRestorableState(from: pulseController.sessionManager, controller: pulseController)
+            pulseState.encode(with: coder)
+        }
     }
 
     func application(_ app: NSApplication, didDecodeRestorableState coder: NSCoder) {
@@ -893,6 +902,11 @@ class AppDelegate: NSObject,
         if ghostty.config.windowSaveState != "never",
             let state = QuickTerminalRestorableState(coder: coder) {
             quickTerminalControllerState = .pendingRestore(state)
+        }
+
+        // Restore Pulse state
+        if let pulseState = PulseRestorableState(coder: coder) {
+            pendingPulseRestore = pulseState
         }
     }
 

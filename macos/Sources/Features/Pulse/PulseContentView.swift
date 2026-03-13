@@ -53,7 +53,15 @@ struct PulseContentView: View {
                         if let activeId = sessionManager.activeSessionId {
                             onCloseSession(activeId)
                         }
-                    }
+                    },
+                    onSaveWorkspace: {
+                        let name = "workspace-\(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .short).replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-"))"
+                        try? sessionManager.saveWorkspace(name: name)
+                    },
+                    onLoadWorkspace: { name in
+                        NotificationCenter.default.post(name: .pulseLoadWorkspace, object: nil, userInfo: ["name": name])
+                    },
+                    workspaceNames: sessionManager.listWorkspaces()
                 )
             }
 

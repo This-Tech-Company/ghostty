@@ -47,6 +47,11 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
     // An optional delegate to receive information about terminal changes.
     weak var delegate: (any TerminalViewDelegate)?
 
+    // Optional Pulse-specific callbacks for the command palette.
+    var onCreateSession: (() -> Void)? = nil
+    var onToggleSidebar: (() -> Void)? = nil
+    var onCloseSession: (() -> Void)? = nil
+
     /// The most recently focused surface, equal to `focusedSurface` when it is non-nil.
     @State private var lastFocusedSurface: Weak<Ghostty.SurfaceView>?
 
@@ -112,9 +117,14 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
                         surfaceView: surfaceView,
                         isPresented: $viewModel.commandPaletteIsShowing,
                         ghosttyConfig: ghostty.config,
-                        updateViewModel: (NSApp.delegate as? AppDelegate)?.updateViewModel) { action in
-                        self.delegate?.performAction(action, on: surfaceView)
-                    }
+                        updateViewModel: (NSApp.delegate as? AppDelegate)?.updateViewModel,
+                        onAction: { action in
+                            self.delegate?.performAction(action, on: surfaceView)
+                        },
+                        onCreateSession: onCreateSession,
+                        onToggleSidebar: onToggleSidebar,
+                        onCloseSession: onCloseSession
+                    )
                 }
 
                 // Show update information above all else.

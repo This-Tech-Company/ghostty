@@ -41,7 +41,20 @@ struct PulseContentView: View {
                     .frame(width: 1)
 
                 // Terminal content area
-                TerminalView(ghostty: ghostty, viewModel: viewModel, delegate: viewModel)
+                TerminalView(
+                    ghostty: ghostty,
+                    viewModel: viewModel,
+                    delegate: viewModel,
+                    onCreateSession: onCreateSession,
+                    onToggleSidebar: {
+                        sessionManager.sidebarCollapsed.toggle()
+                    },
+                    onCloseSession: {
+                        if let activeId = sessionManager.activeSessionId {
+                            onCloseSession(activeId)
+                        }
+                    }
+                )
             }
 
             // Status bar

@@ -172,6 +172,12 @@ class PulseWindowController: BaseTerminalController {
                 return nil
             }
 
+            // Cmd+K: toggle command palette
+            if key == "k" && !event.modifierFlags.contains(.shift) {
+                self.toggleCommandPalette(nil)
+                return nil
+            }
+
             // Cmd+1 through Cmd+9: switch to session by index
             if let digit = Int(key), digit >= 1 && digit <= 9 {
                 self.saveCurrentTree()

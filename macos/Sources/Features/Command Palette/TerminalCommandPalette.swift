@@ -18,6 +18,11 @@ struct TerminalCommandPaletteView: View {
     /// The callback when an action is submitted.
     var onAction: ((String) -> Void)
 
+    /// Optional Pulse-specific callbacks. When non-nil, Pulse options appear in the palette.
+    var onCreateSession: (() -> Void)? = nil
+    var onToggleSidebar: (() -> Void)? = nil
+    var onCloseSession: (() -> Void)? = nil
+
     var body: some View {
         ZStack {
             if isPresented {
@@ -60,6 +65,9 @@ struct TerminalCommandPaletteView: View {
         var options: [CommandOption] = []
         // Updates always appear first
         options.append(contentsOf: updateOptions)
+
+        // Pulse-specific options appear next (only when callbacks are provided)
+        options.append(contentsOf: pulseOptions)
 
         // Sort the rest. We replace ":" with a character that sorts before space
         // so that "Foo:" sorts before "Foo Bar:". Use sortKey as a tie-breaker
@@ -173,6 +181,63 @@ struct TerminalCommandPaletteView: View {
                 }
             }
         }
+    }
+
+    /// Pulse-specific commands (new session, split, toggle sidebar, close session).
+    private var pulseOptions: [CommandOption] {
+        // Only show Pulse options when the callbacks are provided
+        guard onCreateSession != nil || onToggleSidebar != nil || onCloseSession != nil else {
+            return []
+        }
+
+        var options: [CommandOption] = []
+
+        if let onCreateSession {
+            options.append(CommandOption(
+                title: "New Session",
+                leadingIcon: "plus.rectangle",
+                symbols: ["⌘", "T"]
+            ) {
+                onCreateSession()
+            })
+        }
+
+        options.append(CommandOption(
+            title: "Split Pane Right",
+            leadingIcon: "rectangle.split.2x1",
+            symbols: ["⌘", "D"]
+        ) {
+            onAction("new_split:right")
+        })
+
+        options.append(CommandOption(
+            title: "Split Pane Down",
+            leadingIcon: "rectangle.split.1x2",
+            symbols: ["⌘", "⇧", "D"]
+        ) {
+            onAction("new_split:down")
+        })
+
+        if let onToggleSidebar {
+            options.append(CommandOption(
+                title: "Toggle Sidebar",
+                leadingIcon: "sidebar.left",
+                symbols: ["⌘", "B"]
+            ) {
+                onToggleSidebar()
+            })
+        }
+
+        if let onCloseSession {
+            options.append(CommandOption(
+                title: "Close Session",
+                leadingIcon: "xmark.circle"
+            ) {
+                onCloseSession()
+            })
+        }
+
+        return options
     }
 
 }

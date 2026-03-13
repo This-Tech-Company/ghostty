@@ -26,7 +26,7 @@ class PulseWindow: NSWindow {
 
         // Appearance
         self.appearance = NSAppearance(named: .darkAqua)
-        self.isMovableByWindowBackground = true
+        self.isMovableByWindowBackground = false
 
         // Minimum size
         self.minSize = NSSize(width: 600, height: 400)

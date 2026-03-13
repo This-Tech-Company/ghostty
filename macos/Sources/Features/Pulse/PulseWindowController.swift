@@ -96,7 +96,7 @@ class PulseWindowController: BaseTerminalController {
             }
         )
 
-        let hostingView = NSHostingView(rootView: contentView)
+        let hostingView = NonDraggableHostingView(rootView: contentView)
         hostingView.translatesAutoresizingMaskIntoConstraints = false
         window.contentView = hostingView
         self.contentHostingView = hostingView

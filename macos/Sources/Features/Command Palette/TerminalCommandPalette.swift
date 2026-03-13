@@ -195,8 +195,8 @@ struct TerminalCommandPaletteView: View {
         if let onCreateSession {
             options.append(CommandOption(
                 title: "New Session",
-                leadingIcon: "plus.rectangle",
-                symbols: ["⌘", "T"]
+                symbols: ["⌘", "T"],
+                leadingIcon: "plus.rectangle"
             ) {
                 onCreateSession()
             })
@@ -204,16 +204,16 @@ struct TerminalCommandPaletteView: View {
 
         options.append(CommandOption(
             title: "Split Pane Right",
-            leadingIcon: "rectangle.split.2x1",
-            symbols: ["⌘", "D"]
+            symbols: ["⌘", "D"],
+            leadingIcon: "rectangle.split.2x1"
         ) {
             onAction("new_split:right")
         })
 
         options.append(CommandOption(
             title: "Split Pane Down",
-            leadingIcon: "rectangle.split.1x2",
-            symbols: ["⌘", "⇧", "D"]
+            symbols: ["⌘", "⇧", "D"],
+            leadingIcon: "rectangle.split.1x2"
         ) {
             onAction("new_split:down")
         })
@@ -221,8 +221,8 @@ struct TerminalCommandPaletteView: View {
         if let onToggleSidebar {
             options.append(CommandOption(
                 title: "Toggle Sidebar",
-                leadingIcon: "sidebar.left",
-                symbols: ["⌘", "B"]
+                symbols: ["⌘", "B"],
+                leadingIcon: "sidebar.left"
             ) {
                 onToggleSidebar()
             })

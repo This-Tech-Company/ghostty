@@ -3,6 +3,7 @@ import SwiftUI
 /// A single session row in the Pulse sidebar.
 struct PulseSessionRowView: View {
     let session: PulseSession
+    let index: Int
     let isActive: Bool
     let onRename: (String) -> Void
     @Binding var isEditing: Bool
@@ -11,6 +12,12 @@ struct PulseSessionRowView: View {
 
     var body: some View {
         HStack(spacing: 10) {
+            // Index number (1-based, matching Cmd+N shortcuts)
+            Text("\(index + 1)")
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundColor(isActive ? Color(hex: 0x86868B) : Color(hex: 0x56565A))
+                .frame(width: 16, alignment: .center)
+
             // Status dot
             Circle()
                 .fill(statusColor)

@@ -35,7 +35,7 @@ struct PulseSidebarView: View {
             // Session list
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(sessionManager.sessions) { session in
+                    ForEach(Array(sessionManager.sessions.enumerated()), id: \.element.id) { index, session in
                         let isEditingThis = Binding<Bool>(
                             get: { editingSessionId == session.id },
                             set: { newVal in editingSessionId = newVal ? session.id : nil }
@@ -43,6 +43,7 @@ struct PulseSidebarView: View {
 
                         PulseSessionRowView(
                             session: session,
+                            index: index,
                             isActive: session.id == sessionManager.activeSessionId,
                             onRename: { newName in
                                 onRenameSession(session.id, newName)

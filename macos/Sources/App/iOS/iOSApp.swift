@@ -7,7 +7,7 @@ struct Ghostty_iOSApp: App {
 
     init() {
         if ghostty_init(UInt(CommandLine.argc), CommandLine.unsafeArgv) != GHOSTTY_SUCCESS {
-            preconditionFailure("Initialize ghostty backend failed")
+            preconditionFailure("Initialize Pulse backend failed")
         }
         _ghostty_app = StateObject(wrappedValue: Ghostty.App())
     }

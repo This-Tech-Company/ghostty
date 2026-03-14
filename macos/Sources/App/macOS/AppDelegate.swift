@@ -433,7 +433,7 @@ class AppDelegate: NSObject,
         let alert = NSAlert()
         alert.messageText = "Quit Pulse?"
         alert.informativeText = "All terminal sessions will be terminated."
-        alert.addButton(withTitle: "Close Ghostty")
+        alert.addButton(withTitle: "Close Pulse")
         alert.addButton(withTitle: "Cancel")
         alert.alertStyle = .warning
         switch alert.runModal() {
@@ -999,7 +999,7 @@ class AppDelegate: NSObject,
     }
 
     @IBAction func showHelp(_ sender: Any) {
-        guard let url = URL(string: "https://ghostty.org/docs") else { return }
+        guard let url = URL(string: "https://github.com/This-Tech-Company/pulse") else { return }
         NSWorkspace.shared.open(url)
     }
 
@@ -1370,7 +1370,7 @@ extension AppDelegate {
                 let alert = NSAlert()
                 alert.messageText = "Failed to Set Default Terminal"
                 alert.informativeText = """
-                Ghostty could not be set as the default terminal application.
+                Pulse could not be set as the default terminal application.
 
                 Error: \(error.localizedDescription)
                 """

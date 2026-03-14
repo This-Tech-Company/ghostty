@@ -5,7 +5,7 @@ enum GhosttyIntentError: Error, CustomLocalizedStringResourceConvertible {
 
     var localizedStringResource: LocalizedStringResource {
         switch self {
-        case .appUnavailable: "The Ghostty app isn't properly initialized."
+        case .appUnavailable: "The Pulse app isn't properly initialized."
         case .surfaceNotFound: "The terminal no longer exists."
         case .permissionDenied: "Pulse doesn't allow Shortcuts."
         }
